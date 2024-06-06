@@ -1,0 +1,716 @@
+/*******************************************************************************
+* Instrument: SLEIPNER Concept
+*
+* %I
+* Written by: Nicolai Amin (s194113@dtu.dk)
+* Date: current date
+* Origin: DTU Fysik
+* %INSTRUMENT_SITE: Templates
+*
+* instrument short description
+*
+* %D
+* instrument description
+*
+* Example: parameters=values
+*
+* %P
+* Par1: [unit] Parameter1 description
+*
+* %L
+* <reference/HTML link>
+*
+* %E
+*******************************************************************************/
+DEFINE INSTRUMENT SLIEPNER(L0=4, Theta2_4AA=-1, m=4, mon_x = 0.09, mon_y =0.12, NH=0, NV=0, fx_disp=3, fy_disp=2, L1=1.8,L2=1.5, RH1=-1,RV1=-1, RH2=-1,RV2=-1,mos1=40,mos2=40,string Powder="Na2Ca3Al2F14.laz", n=3)
+
+DECLARE
+%{
+double Rot_optic;
+double dL;
+double AA_1;
+
+// HOPG d-spacing 002
+double D_PC_002 = 3.355;
+// Radii of horz / vert focusing,
+// calculated from theoretical formula from
+// Monochromator_curved
+double RH;
+double RV;
+
+// Distance 1st optic to Mono position
+double D_ss = 12;
+// Distance source to 1st optic (if active)
+double source_pos = 2;
+
+// Vars for length of different optics
+double E_guide;
+
+// Parametrization of source wavelength from L0, dL
+double Lmin;
+double Lmax;
+
+// Distance to send the neutrons
+double D_illum;
+
+// Function to calculate 2\theta of Bragg
+// reflection
+double T_Bragg(double D, double L){
+    return asin((L)/(D*2))*RAD2DEG*2;
+}
+
+// Focal points for parabola
+double f_x;
+double f_y;
+
+// Openings of parabola for focusing
+double focus_xw;
+double focus_yh;
+
+// Setting radius for 1st and second monochromators
+
+double RH1;
+double RV1;
+double RH2;
+double RV2;
+
+%}
+
+USERVARS
+%{
+%}
+
+INITIALIZE
+%{
+
+dL = L0*0.2;
+AA_1 = L0;
+
+// Pick correct optic rotation for m value
+if (L0>=2) {
+    Rot_optic = -1;
+}
+if (1.6<L0 && L0<2) {
+    Rot_optic = 0.8 - 1.8*(L0-1.6)/0.4;
+}
+if (L0<1.6) {
+    Rot_optic = 0.8;
+}
+
+// Only calculate 2\theta automatically if no value provided
+if (Theta2_4AA==-1) Theta2_4AA = T_Bragg(D_PC_002,AA_1);
+
+if (NV==0 && NH==0) {
+    NV = mon_x/0.01; // Horizontal is actually vertical here
+    NH = floor((mon_y/sin(DEG2RAD*Theta2_4AA/2))/0.01);
+} else {
+    mon_x = NV*0.01;
+    mon_y = (NH*0.01)*sin(DEG2RAD*Theta2_4AA/2);
+}
+
+// Calculate lengths of elliptic and linear guide
+E_guide = (D_ss-mon_x*sin(DEG2RAD*Theta2_4AA/2));
+
+// Set up source foucsing via "guide" input parameter
+// ( Perhaps something should be done to aim at optic opening
+//   for the 3 different cases - but for now accept losses )
+D_illum = 2;
+
+// Set up source wavelength range
+Lmin = L0-dL;
+Lmax = L0+dL;
+
+// Calculating focus_xw and focus_yg
+f_y = (sqrt((2+E_guide+fx_disp)*(2+E_guide+fx_disp)*4*4+16*(mon_y/2)*(mon_y/2))-(2+E_guide+fx_disp)*4)/(2*4);
+f_x = (sqrt((2+E_guide+fy_disp)*(2+E_guide+fy_disp)*4*4+16*(mon_x/2)*(mon_x/2))-(2+E_guide+fy_disp)*4)/(2*4);
+
+focus_yh = sqrt(4*f_y*f_y+8*f_y+fy_disp*4*f_y)*2;
+focus_xw = sqrt(4*f_x*f_x+8*f_x+fx_disp*4*f_x)*2;
+
+// Radius of curvature
+
+if (RV1==-1 && RH1==-1) {
+    RV1 = 2*L1/(sin(DEG2RAD*Theta2_4AA/2));
+    RH1 = 2*L1*(sin(DEG2RAD*Theta2_4AA/2));
+}
+if (RH2==-1) {
+RH2 = L2*(sin(DEG2RAD*Theta2_4AA/2));
+}
+if (RV2==-1) {
+RV2 = L2/(sin(DEG2RAD*Theta2_4AA/2));
+}
+%}
+
+TRACE
+
+COMPONENT origin = Progress_bar()
+AT (0, 0, 0) RELATIVE ABSOLUTE
+
+COMPONENT ess_butterfly = ESS_butterfly(
+    acc_power=2,
+    sector="W", 
+    beamline=1,
+    dist=2, 
+    focus_xw=focus_xw, 
+    focus_yh=focus_yh, 
+    Lmin=Lmin, 
+    Lmax=Lmax)
+AT (0, 0, 0) RELATIVE origin
+
+// The "source" point is in fact an ancor point
+// for the first optic, irrespective of type
+COMPONENT source =Arm()
+AT (0,0,source_pos) RELATIVE origin
+ROTATED (0,Rot_optic,0) RELATIVE origin
+
+COMPONENT l_s = L_monitor(
+    nL=200,
+    filename="Det_s", 
+    xwidth=mon_x, 
+    yheight=mon_y, 
+    Lmin=Lmin, 
+    Lmax=Lmax,
+    restore_neutron=1)
+AT (0, 0, 0) RELATIVE source
+
+COMPONENT l_s_4 = L_monitor(
+    nL=200,
+    filename="Det_s_4", 
+    xwidth=mon_x, 
+    yheight=mon_y, 
+    Lmin=3.5, 
+    Lmax=4.5,
+    restore_neutron=1)
+AT (0, 0, 0) RELATIVE source
+
+COMPONENT psd_s = PSD_monitor(
+    nx=200, 
+    ny=200, 
+    filename="PSD_s", 
+    xwidth=mon_x,
+    yheight=mon_y,
+    restore_neutron=1)
+AT (0, 0, 0) RELATIVE source
+
+COMPONENT divpos_s_H = DivPos_monitor(
+    nb=200, 
+    ndiv=200, 
+    filename="Div_H_Pos_s", 
+    xwidth=mon_x, 
+    yheight=mon_y, 
+    restore_neutron=1)
+AT (0, 0, 0) RELATIVE source
+
+COMPONENT divpos_s_V = DivPos_monitor(
+    nb=200, 
+    ndiv=200, 
+    filename="Div_V_Pos_s", 
+    xwidth=mon_y, 
+    yheight=mon_x, 
+    restore_neutron=1)
+AT (0, 0, 0) RELATIVE source
+ROTATED (0, 0, 90) RELATIVE source
+
+COMPONENT divlambda_s = DivLambda_monitor(
+    nL=200, 
+    nh=200, 
+    filename="DivL_s", 
+    xwidth=mon_x, 
+    yheight=mon_y, 
+    Lmin=Lmin, 
+    Lmax=Lmax, 
+    restore_neutron=1)
+AT (0, 0, 0) RELATIVE source
+
+COMPONENT divergence_s = Divergence_monitor(
+    nh=200, 
+    nv=200, 
+    filename="Div2d_s", 
+    xwidth=mon_x, 
+    yheight=mon_y, 
+    restore_neutron=1)
+AT (0, 0, 0) RELATIVE source
+
+
+
+
+
+
+
+
+
+// Optics
+// Parabolic
+COMPONENT parabolic = Elliptic_guide_gravity(
+    xwidth=focus_xw, yheight=focus_yh, dimensionsAt = "entrance",
+    linxw=source_pos+fx_disp,linyh=source_pos+fy_disp,
+    loutxw=1e6, loutyh=1e6,
+    l=E_guide,
+    m=m // Change when you start to optimize this
+)
+AT (0, 0, 0) RELATIVE PREVIOUS
+
+
+
+// Monitors before 1. Monochromator - placed "at" monochromator
+// position but all with "restore_neutron" - making overlap with the Mono
+//  "OK"
+
+// 1. Monochromator
+// Position
+COMPONENT Mon_1 = Arm()
+AT (0, 0, D_ss) RELATIVE source
+
+// Monitors to measure L, PSD, Div
+
+/*
+
+COMPONENT l_monitor_0 = L_monitor(
+    nL=200,
+    filename="Det_Mon_1", 
+    xwidth=mon_x, 
+    yheight=mon_y, 
+    Lmin=Lmin, 
+    Lmax=Lmax,
+    restore_neutron=1)
+AT (0, 0, 0) RELATIVE Mon_1
+
+COMPONENT l_monitor_0_4 = L_monitor(
+    nL=200,
+    filename="Det_Mon_1_4", 
+    xwidth=mon_x, 
+    yheight=mon_y, 
+    Lmin=3.5, 
+    Lmax=4.5,
+    restore_neutron=1)
+AT (0, 0, 0) RELATIVE Mon_1
+
+COMPONENT psd_monitor_0 = PSD_monitor(
+    nx=200, 
+    ny=200, 
+    filename="PSD_Mon_1", 
+    xwidth=mon_x,
+    yheight=mon_y,
+    restore_neutron=1)
+AT (0, 0, 0) RELATIVE Mon_1
+
+COMPONENT divpos_monitor_0_H = DivPos_monitor(
+    nb=200, 
+    ndiv=200, 
+    filename="Div_H_Pos_Mon_1", 
+    xwidth=mon_x, 
+    yheight=mon_y, 
+    restore_neutron=1)
+AT (0, 0, 0) RELATIVE Mon_1
+
+COMPONENT divpos_monitor_0_V = DivPos_monitor(
+    nb=200, 
+    ndiv=200, 
+    filename="Div_V_Pos_Mon_1", 
+    xwidth=mon_y, 
+    yheight=mon_x, 
+    restore_neutron=1)
+AT (0, 0, 0) RELATIVE Mon_1
+ROTATED (0, 0, 90) RELATIVE Mon_1
+
+COMPONENT divlambda_monitor_0 = DivLambda_monitor(
+    nL=200, 
+    nh=200, 
+    filename="DivL_Mon_1", 
+    xwidth=mon_x, 
+    yheight=mon_y, 
+    Lmin=Lmin, 
+    Lmax=Lmax, 
+    restore_neutron=1)
+AT (0, 0, 0) RELATIVE Mon_1
+
+COMPONENT divergence_monitor_0 = Divergence_monitor(
+    nh=200, 
+    nv=200, 
+    filename="Div2d_Mon_1", 
+    xwidth=mon_x, 
+    yheight=mon_y, 
+    restore_neutron=1)
+AT (0, 0, 0) RELATIVE Mon_1
+
+*/
+
+
+// Rotation
+COMPONENT Mon_1_1 = Arm()
+AT (0, 0, 0) RELATIVE Mon_1
+ROTATED (0, 0, 90) RELATIVE Mon_1
+
+// Component
+COMPONENT monochromator_curved_1_1 = Monochromator_curved(
+    NH=NH, 
+    NV=NV,  
+    mosaic=mos1,
+    r0=0.85,
+    RV=RH1,      // Swapped due to McStas Geometry
+    RH=RV1,      // Swapped due to McStas Geometry
+    DM=D_PC_002)
+AT (0, 0, 0) RELATIVE Mon_1_1
+ROTATED (0, Theta2_4AA/2, 0) RELATIVE Mon_1_1
+
+
+/*
+// 4PI Monitor around mc
+COMPONENT psd_monitor_4pi = PSD_monitor_4PI(
+    nx=250,
+    ny=250,
+    filename="mono_1", 
+    radius=0.5, 
+    restore_neutron=1)
+AT (0, 0, 0) RELATIVE Mon_1
+
+// L Mon after the 1. Monochromator to see what comes out afterwards
+COMPONENT l_monitor_post = L_monitor(
+    nL=200, 
+    filename="Post_L", 
+    xwidth=0.9, 
+    yheight=0.12, 
+    Lmin=Lmin, 
+    Lmax=Lmax,
+    restore_neutron=1)
+AT (0, 0, 0.5) RELATIVE Mon_1
+
+COMPONENT psd_monitor_post = PSD_monitor(
+    nx=100, 
+    ny=100, 
+    filename="Post_PSD", 
+    xwidth=0.12,
+    yheight=0.12,
+    restore_neutron=1)
+AT (0, 0, 0.5) RELATIVE Mon_1
+
+*/
+
+
+// Arm rotation towards next Monochromator
+COMPONENT Mono_to_Mono_1 = Arm()
+AT (0, 0, 0) RELATIVE Mon_1_1
+ROTATED (0, Theta2_4AA, 0) RELATIVE Mon_1_1
+/*
+// Monitors to measure beam spread and characteristics
+// 0.5m
+COMPONENT psd_monitor_2_1 = PSD_monitor(
+    nx=100, 
+    ny=100, 
+    filename="PSD_2_1", 
+    xwidth=0.1, 
+    yheight=0.1,
+    restore_neutron=1)
+AT (0, 0, L1/2) RELATIVE Mono_to_Mono_1
+*/
+// 1m
+COMPONENT psd_monitor_2_2 = PSD_monitor(
+    nx=100, 
+    ny=100, 
+    filename="PSD_2_2", 
+    xwidth=0.1, 
+    yheight=0.1,
+    restore_neutron=1)
+AT (0, 0, L1) RELATIVE Mono_to_Mono_1
+
+COMPONENT divpos_monitor_f_y_2 = DivPos_monitor(
+    nb=100, 
+    ndiv=100, 
+    filename="div_y_2",
+    xwidth=0.1, 
+    yheight=0.1, 
+    restore_neutron=1, 
+    vertical=1)
+AT (0, 0, 0) RELATIVE PREVIOUS
+
+COMPONENT divpos_monitor_f_x_2 = DivPos_monitor(
+    nb=100, 
+    ndiv=100, 
+    filename="div_x_2",
+    xwidth=0.1, 
+    yheight=0.1, 
+    restore_neutron=1, 
+    vertical=0)
+AT (0, 0, 0) RELATIVE PREVIOUS
+
+/*
+// 1.5 m
+COMPONENT psd_monitor_2_3 = PSD_monitor(
+    nx=100, 
+    ny=100, 
+    filename="PSD_2_3", 
+    xwidth=0.12, 
+    yheight=0.12,
+    restore_neutron=1)
+AT (0, 0, L1+L2/2) RELATIVE Mono_to_Mono_1
+*/
+// Wavelength Montior
+COMPONENT l_monitor_2 = L_monitor(
+    filename="Det_2",
+    xwidth=0.09, 
+    yheight=0.12, 
+    Lmin=3.5, 
+    Lmax=4.5, 
+    restore_neutron=1)
+AT (0, 0, L1) RELATIVE Mono_to_Mono_1
+
+
+
+// 2. Monochromator - Set up to give parrallel beam
+// Position
+COMPONENT Mon_2 = Arm()
+AT (0, 0, L1+L2) RELATIVE Mono_to_Mono_1
+
+// Component (doesn't require prior rotation)
+COMPONENT monochromator_curved_1_2 = Monochromator_curved(
+    NH=NH, 
+    NV=NV, 
+    mosaic=mos2,
+    r0=0.85,
+    RV=-RH2, // Swapped due to McStas Geometry
+    RH=-RV2, // Swapped due to McStas Geometry
+    DM=D_PC_002)
+AT (0, 0, 0) RELATIVE Mon_2
+ROTATED (0, -Theta2_4AA/2, 0) RELATIVE Mon_2
+
+
+// Arm rotation towards sample
+COMPONENT Mono_to_Sample = Arm()
+AT (0, 0, 0) RELATIVE Mon_2
+ROTATED (0, -Theta2_4AA, 0) RELATIVE Mon_2
+
+// Arm rotation of x & y
+COMPONENT Mono_to_Sample_1 = Arm()
+AT (0, 0, 0) RELATIVE Mono_to_Sample
+ROTATED (0, 0, -90) RELATIVE Mono_to_Sample
+
+
+// Collimator
+COMPONENT Coll = Collimator_linear(
+  xwidth = 0.04,
+  yheight = 0.1,
+  length = 0.3,
+  divergence = 20,
+  transmission = 1) 
+AT (0, 0, 0.5) RELATIVE  Mono_to_Sample_1
+ROTATED (0, 0, 90) RELATIVE  Mono_to_Sample_1
+
+
+
+// Monitors post Monochromator set up: Currently measuring PSD and Lambda
+COMPONENT l_monitor_3 = L_monitor(
+    nL=100,
+    filename="Det_3", 
+    xwidth=0.1, 
+    yheight=0.1, 
+    Lmin=0.9*L0, 
+    Lmax=1.1*L0, 
+    restore_neutron=1)
+AT (0, 0, L2) RELATIVE Mono_to_Sample_1
+
+COMPONENT TOF_L = TOFLambda_monitor(
+  nL = 200,
+  nt = 400,
+  tmin = 0,
+  tmax = 20000,
+  filename = "TOF_L",
+  xwidth = 0.01,
+  yheight = 0.01,
+  Lmin = Lmin,
+  Lmax = Lmax,
+  restore_neutron = 1) 
+ AT (0, 0, 0) RELATIVE  PREVIOUS
+
+COMPONENT l_monitor_3_2 = L_monitor(
+    nL=100,
+    filename="Det_3_2", 
+    xwidth=0.1, 
+    yheight=0.1, 
+    Lmin=0.9*L0/2, 
+    Lmax=1.1*L0/2, 
+    restore_neutron=1)
+AT (0, 0, L2) RELATIVE Mono_to_Sample_1
+
+COMPONENT psd_monitor_3 = PSD_monitor(
+    nx=100, 
+    ny=100, 
+    filename="PSD_Final", 
+    xwidth=0.1, 
+    yheight=0.1,
+    restore_neutron=1)
+AT (0, 0, 0) RELATIVE PREVIOUS
+
+COMPONENT psd_monitor_1x1 = PSD_monitor(
+    nx=200, 
+    ny=200, 
+    filename="psd_monitor_1x1", 
+    xwidth=0.01, 
+    yheight=0.01,
+    restore_neutron=1)
+AT (0, 0, 0) RELATIVE PREVIOUS
+
+COMPONENT l_monitor_1x1_4 = L_monitor(
+    nL=200,
+    filename="l_monitor_1x1_4", 
+    xwidth=0.01, 
+    yheight=0.01, 
+    Lmin=0.9*L0, 
+    Lmax=1.1*L0, 
+    restore_neutron=1)
+AT (0, 0, L2) RELATIVE Mono_to_Sample_1
+
+COMPONENT l_monitor_1x1_2 = L_monitor(
+    nL=200,
+    filename="l_monitor_1x1_2", 
+    xwidth=0.01, 
+    yheight=0.01, 
+    Lmin=0.9*L0/2, 
+    Lmax=1.1*L0/2, 
+    restore_neutron=1)
+AT (0, 0, L2) RELATIVE Mono_to_Sample_1
+
+COMPONENT divergence_monitor_f = Divergence_monitor(
+    nh=100, 
+    nv=100, 
+    filename="div_f", 
+    xwidth=0.1, 
+    yheight=0.1, 
+    restore_neutron=1)
+AT (0, 0, L2) RELATIVE Mono_to_Sample_1
+
+COMPONENT divergence_monitor_f_1x1 = Divergence_monitor(
+    nh=100, 
+    nv=100, 
+    filename="div_f_1x1", 
+    xwidth=0.01, 
+    yheight=0.01, 
+    restore_neutron=1)
+AT (0, 0, L2) RELATIVE Mono_to_Sample_1
+
+COMPONENT e_monitor_1x1_4 = E_monitor(
+    nE=200, 
+    filename="e_monitor_1x1_4", 
+    xwidth=0.01, 
+    yheight=0.01, 
+    Emax=81.82/(0.9*L0*0.9*L0), 
+    Emin=81.82/(1.1*L0*1.1*L0), 
+    restore_neutron=1)
+AT (0, 0, 0) RELATIVE PREVIOUS
+
+COMPONENT e_monitor_1x1_2 = E_monitor(
+    nE=200, 
+    filename="e_monitor_1x1_2", 
+    xwidth=0.01, 
+    yheight=0.01, 
+    Emax=2*81.82/(0.9*L0*0.9*L0), 
+    Emin=2*81.82/(1.1*L0*1.1*L0), 
+    restore_neutron=1)
+AT (0, 0, 0) RELATIVE PREVIOUS
+
+COMPONENT e_monitor_4 = E_monitor(
+    nE=200, 
+    filename="e_monitor_4", 
+    xwidth=0.1, 
+    yheight=0.1, 
+    Emax=81.82/(0.9*L0*0.9*L0), 
+    Emin=81.82/(1.1*L0*1.1*L0), 
+    restore_neutron=1)
+AT (0, 0, 0) RELATIVE PREVIOUS
+
+COMPONENT e_monitor_2 = E_monitor(
+    nE=200, 
+    filename="e_monitor_2", 
+    xwidth=0.1, 
+    yheight=0.1, 
+    Emax=2*81.82/(0.9*L0*0.9*L0), 
+    Emin=2*81.82/(1.1*L0*1.1*L0), 
+    restore_neutron=1)
+AT (0, 0, 0) RELATIVE PREVIOUS
+
+COMPONENT divpos_monitor_f_y_1x1 = DivPos_monitor(
+    nb=100, 
+    ndiv=100, 
+    filename="div_y_1x1",
+    xwidth=0.01, 
+    yheight=0.01, 
+    restore_neutron=1, 
+    vertical=1)
+AT (0, 0, 0) RELATIVE PREVIOUS
+
+COMPONENT divpos_monitor_f_x_1x1 = DivPos_monitor(
+    nb=100, 
+    ndiv=100, 
+    filename="div_x_1x1",
+    xwidth=0.01, 
+    yheight=0.01, 
+    restore_neutron=1, 
+    vertical=0)
+AT (0, 0, 0) RELATIVE PREVIOUS
+
+COMPONENT divpos_monitor_f_y = DivPos_monitor(
+    nb=100, 
+    ndiv=100, 
+    filename="div_y",
+    xwidth=0.1, 
+    yheight=0.1, 
+    restore_neutron=1, 
+    vertical=1)
+AT (0, 0, 0) RELATIVE PREVIOUS
+
+COMPONENT divpos_monitor_f_x = DivPos_monitor(
+    nb=100, 
+    ndiv=100, 
+    filename="div_x",
+    xwidth=0.1, 
+    yheight=0.1, 
+    restore_neutron=1, 
+    vertical=0)
+AT (0, 0, 0) RELATIVE PREVIOUS
+
+/*
+SPLIT 1330 COMPONENT Sample = PowderN(
+  reflections = Powder,
+  radius = 0.0030,
+  yheight = 0.040,
+  d_phi=RAD2DEG*atan2(0.35,1.5)) 
+ AT (0, 0, L2) RELATIVE  Mono_to_Sample_1
+ ROTATED (0, 0, 90) RELATIVE  Mono_to_Sample_1
+*/
+
+SPLIT 1330  COMPONENT Sample = Powder1(
+  radius = 0.0030,
+  yheight = 0.040,
+  d = n) 
+AT (0, -0.0037, L2) RELATIVE  Mono_to_Sample_1
+ROTATED (0, 0, 90) RELATIVE  Mono_to_Sample_1
+
+COMPONENT SL_BananaTheta = Monitor_nD(
+    options = "banana, angle limits=[5 165], bins=6400",
+    radius = 2*1.5, yheight = 0.3, restore_neutron=1)
+  AT (0, 0, 0) RELATIVE Sample
+
+COMPONENT SL_BananaThetaTOF = Monitor_nD(
+    options = "banana, angle limits=[5 165], bins=6400, t limits=[0.01 0.02], bins=100",
+    radius = 2*1.5, yheight = 0.3, restore_neutron=1)
+  AT (0, 0, 0) RELATIVE Sample
+
+COMPONENT SL_BananaThetaCenter = Monitor_nD(
+    options = "banana, angle limits=[5 165], bins=6400",
+    radius = 2*1.5, yheight = 0.1, restore_neutron=1)
+  AT (0, 0, 0) RELATIVE Sample
+
+/* perfect detector: 2D(theta,y) to see diffraction rings */
+COMPONENT SL_BananaPSD = Monitor_nD(
+    options = "banana, theta limits=[-165 -5] bins=320, y bins=25",
+    radius = 2*1.5*1.005, yheight = 0.3)
+  AT (0, 0, 0) RELATIVE Sample
+
+
+
+
+
+FINALLY
+%{
+%}
+
+END
