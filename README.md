@@ -19,3 +19,5 @@ In this study, Monte Carlo simulation tools are used to design and optimize a ve
     - [Low Resolution](Results/D1B_4_High.png) with a flux of 2.76781e+07 neutrons pr. s. pr. cm^2
 - Each instrument would be able to run at the designed 2.6 Å, but would also be able to acces half wavelengths with the same resolution, but approximately 1/5 of the flux.
 - These modular instruments would be able to be built in parralel to maximize the use of the available space and beam time.
+
+If you have any questions, please contact [Nicolai Amin](mailto:s194113@dtu.dk)
