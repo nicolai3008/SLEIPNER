@@ -8,8 +8,8 @@ In this study, Monte Carlo simulation tools are used to design and optimize a ve
 
 ### Optimization
 
-- [SLEIPNIR PD McStas instrument](Optimization/SLEIPNER.instr)
-- [Python Optimization Script](Optimization/optimize_4.py)
+- [SLEIPNIR PD McStas instrument](Optimization/SLEIPNIR.instr)
+- [Python Optimization Script](Optimization/optimization_4.py)
 
 ### Results
 

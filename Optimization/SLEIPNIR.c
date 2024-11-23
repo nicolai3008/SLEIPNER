@@ -1,9 +1,9 @@
 /* Automatically generated file. Do not edit. 
  * Format:     ANSI C source code
  * Creator:    McStas <http://www.mcstas.org>
- * Instrument: SLEIPNER.instr (SLIEPNER)
+ * Instrument: SLEIPNIR.instr (SLIEPNER)
  * Date:       Fri Nov  8 16:13:33 2024
- * File:       ./SLEIPNER.c
+ * File:       ./SLEIPNIR.c
  * CFLAGS=
  */
 
@@ -6328,9 +6328,9 @@ int traceenabled = 0;
 #define MCSTAS "/zhome/89/0/38697/McStas/mcstas/3.dtu/"
 int   defaultmain         = 1;
 char  instrument_name[]   = "SLIEPNER";
-char  instrument_source[] = "SLEIPNER.instr";
+char  instrument_source[] = "SLEIPNIR.instr";
 char *instrument_exe      = NULL; /* will be set to argv[0] in main */
-char  instrument_code[]   = "Instrument SLIEPNER source code SLEIPNER.instr is not embedded in this executable.\n  Use --source option when running McStas.\n";
+char  instrument_code[]   = "Instrument SLIEPNER source code SLEIPNIR.instr is not embedded in this executable.\n  Use --source option when running McStas.\n";
 
 int main(int argc, char *argv[]){return mccode_main(argc, argv);}
 
@@ -19320,7 +19320,7 @@ int init(void) { /* called by mccode_main for SLIEPNER:INITIALISE */
   stracpy(instrument->_name, "SLIEPNER", 256);
 
   /* Instrument 'SLIEPNER' INITIALISE */
-  SIG_MESSAGE("[SLIEPNER] INITIALISE [SLEIPNER.instr:96]");
+  SIG_MESSAGE("[SLIEPNER] INITIALISE [SLEIPNIR.instr:96]");
   #define L0 (instrument->_parameters.L0)
   #define dL (instrument->_parameters.dL)
   #define Theta2_4AA (instrument->_parameters.Theta2_4AA)
@@ -26885,4 +26885,4 @@ int mccode_main(int argc, char *argv[])
 } /* mccode_main */
 /* End of file "mccode_main.c". */
 
-/* end of generated C code ./SLEIPNER.c */
+/* end of generated C code ./SLEIPNIR.c */

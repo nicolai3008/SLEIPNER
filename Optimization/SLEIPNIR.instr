@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Instrument: SLEIPNER Concept
+* Instrument: SLEIPNIR Concept
 *
 * %I
 * Written by: Nicolai Amin (s194113@dtu.dk)
@@ -22,7 +22,7 @@
 *
 * %E
 *******************************************************************************/
-DEFINE INSTRUMENT SLIEPNER(L0=4, dL=0.2, Theta2_4AA=-1, AA_1 = -1, d_spacing = 3.355, m=4, mon_x = 0.09, mon_y =0.12, NH=0, NV=0, fx_disp=3, fy_disp=2, L1=2.16, L2=1.5, L3=1.5, RH1=-1,RV1=-1, RH2=-1,RV2=-1,mos1=35,mos2=75, string Powder="test_sample.laz", HD=0.1, col_h=30, col_v=30,shift=0.1, sample_y=0)
+DEFINE INSTRUMENT SLEIPNIR(L0=4, dL=0.2, Theta2_4AA=-1, AA_1 = -1, d_spacing = 3.355, m=4, mon_x = 0.09, mon_y =0.12, NH=0, NV=0, fx_disp=3, fy_disp=2, L1=2.16, L2=1.5, L3=1.5, RH1=-1,RV1=-1, RH2=-1,RV2=-1,mos1=35,mos2=75, string Powder="test_sample.laz", HD=0.1, col_h=30, col_v=30,shift=0.1, sample_y=0)
 
 DECLARE
 %{

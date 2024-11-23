@@ -21,7 +21,6 @@
 ### -- -o and -e mean append, -oo and -eo mean overwrite --
 #BSUB -o 
 #BSUB -e 
-#BSUB -cwd /work3/s194113/SLEIPNER/Article_Runs/Optimization_4
 # -- end of LSF options --
 
 source ~pkwi/WORK/miniconda3/bin/activate
